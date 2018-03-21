@@ -19,7 +19,7 @@
 # - Improved Python 3 support and recent python-ldap
 
 from __future__ import absolute_import
-from buildins import str
+from builtins import str
 
 from ansible import errors
 
