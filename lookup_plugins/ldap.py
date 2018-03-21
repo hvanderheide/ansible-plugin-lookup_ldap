@@ -17,9 +17,10 @@
 #
 # 03/21/2018, Hidde van der Heide
 # - Improved Python 3 support and recent python-ldap
+# - Added recursive group search
 
 from __future__ import absolute_import
-from buildins import str
+from builtins import str
 
 from ansible import errors
 
@@ -123,10 +124,11 @@ class LookupModule(LookupBase):
         # variable is still undefined.
 
         per_item_ctx = {
-            'context': ctx.pop('context', None),
-            'base':    ctx.pop('base', ''),
-            'scope':   ctx.pop('scope', 'subtree'),
-            'filter':  ctx.pop('filter', None)
+            'context':         ctx.pop('context', None),
+            'base':            ctx.pop('base', ''),
+            'scope':           ctx.pop('scope', 'subtree'),
+            'filter':          ctx.pop('filter', None),
+            'recursive_group': ctx.pop('recursive_group', None)
         }
         # At this point, no term-specific items remain in ctx, and we can
         # do template substitution for connection parameters
@@ -240,7 +242,16 @@ class LookupModule(LookupBase):
                                      single_attr: encode(p, item)}
                                     for item in items])
                     else:
-                        ret.extend([encode(p, item) for item in items])
+                        if this_item_ctx.get('recursive_group'):
+                            for item in items:
+                                v_dn = ldap.dn.str2dn(item)
+                                if v_dn[0][0][0] == 'cn':
+                                    for b in self.run([{'context': 'get_switch_admins'}, v_dn[0][0][1]], variables, **kwargs):
+                                        ret.append(b)
+                                    continue
+                                ret.append(encode(p, item))
+                        else:
+                            ret.extend([encode(p, item) for item in items])
 
                 else:
                     item = {'term': term, 'dn': dn}
