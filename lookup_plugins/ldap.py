@@ -14,8 +14,12 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
+#
+# 03/21/2018, Hidde van der Heide
+# - Improved Python 3 support and recent python-ldap
 
 from __future__ import absolute_import
+from buildins import str
 
 from ansible import errors
 
@@ -74,6 +78,8 @@ def encode(p, v):
         v = base64.b64encode(v)
     elif e is not None:
         v = v.decode(e)
+    else:
+        v = v.decode()
     return v
 
 
@@ -127,7 +133,7 @@ class LookupModule(LookupBase):
 
         try:
             ctx = self.render_template(variables, ctx)
-        except Exception, e:
+        except Exception as e:
             raise errors.AnsibleError(
                 'exception while preparing LDAP parameters: %s' % e)
         self._display.vv("LDAP config: %s" % ctx)
@@ -151,7 +157,7 @@ class LookupModule(LookupBase):
                         attr_props[attr_name] = attr_prop_dict
 
             base_args['attrlist'] = \
-                [a.encode('ASCII') for a in attr_props
+                [a for a in attr_props
                  if attr_props[a] is None
                  or not attr_props[a].get('skip', False)]
 
@@ -177,8 +183,8 @@ class LookupModule(LookupBase):
             else:
                 # bindpw may be an AnsibleVaultEncryptedUnicode, which ldap doesn't
                 # know anything about, so cast to unicode explicitly now.
-                
-                lo.simple_bind_s(ctx.get('binddn', ''), unicode(ctx.get('bindpw', '')))
+
+                lo.simple_bind_s(ctx.get('binddn', ''), str(ctx.get('bindpw', '')))
 
         ret = []
 
